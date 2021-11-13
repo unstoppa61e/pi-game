@@ -3,21 +3,74 @@
 'use strict'
 
 {
+  const PI_TEXT = '3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679'
+  const PI_START_TEXT = '3.'
+  const PI_BELOW_THE_DECIMAL_POINT = '1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679'
   const { Select } = require('enquirer')
   const chalk = require('chalk')
 
   class PracticeMode {
-    constructor () {
-      this.pi = '3.1415'
+    constructor (pi_text = PI_TEXT) {
+      this.pi_text = pi_text
     }
 
+    start () {
+      const instruction = 'Keep typing in the number which fits the cursor position.'
+      process.stdout.write(chalk.bold.green(instruction) + '\n\n' + PI_START_TEXT)
+      const readline = require('readline');
+      readline.emitKeypressEvents(process.stdin)
+      process.stdin.setRawMode(true);
+      let currentIndex = 0
+      process.stdin.on('keypress', (char, key) => {
+        if (key.ctrl && key.name === 'c') {
+          process.exit();
+        } else if (currentIndex === 100) {
+          this.putsCongratulations()
+          process.exit();
+        } else if (char === PI_BELOW_THE_DECIMAL_POINT[currentIndex]) {
+          process.stdout.write(char)
+          currentIndex++
+        } else {
+          const scoreMessage = `Your score: ${currentIndex}`
+          const remaining_digits_text = this.make_remaining_digits_text(currentIndex)
+          console.log(chalk.red(remaining_digits_text) + '\n' + scoreMessage)
+          process.exit();
+        }
+      })
+    }
 
+    putsCongratulations () {
+      const headSpaces = ' '.repeat(6)
+      const congratulationsSentences = [
+        'Congratulations!',
+        'You have memorized the first 100 digits of pi.'
+      ]
+      let congratulations = ''
+      congratulationsSentences.forEach(sentence => {
+        congratulations += headSpaces + sentence + '\n'
+      })
+      console.log(chalk.bold.green(congratulations))
+    }
+
+    make_remaining_digits_text (currentIndex) {
+      let remaining_digits_text = ''
+      const digitsNum = 100
+      const sectionDigitsNum = 10
+      const lineDigitsNum = 50
+      for (let i = currentIndex; i < digitsNum; i++) {
+        if (i  === lineDigitsNum) {
+          remaining_digits_text += '\n' + ' '.repeat(PI_START_TEXT.length)
+        } else if (i % sectionDigitsNum === 0) {
+          remaining_digits_text += ' '
+        }
+        remaining_digits_text += PI_BELOW_THE_DECIMAL_POINT[i]
+      }
+      return remaining_digits_text
+    }
   }
 
   class Game {
     constructor () {
-      const welcomeMessage = '>'.repeat(10) + ' PI GAME ' + '<'.repeat(10)
-      console.log(chalk.bold.green(welcomeMessage))
       const sqlite3 = require('sqlite3').verbose()
       this.db = new sqlite3.Database('./high_scores.db')
       this.db.run('create table if not exists notes(id integer primary key, score integer)')
@@ -25,12 +78,12 @@
       this.realMode = 'REAL MODE'
       this.showPiDigits = 'SHOW PI DIGITS'
       this.highScores = 'HIGH SCORES'
-      this.pi = '3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679'
+      this.pi_text = '3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679'
     }
 
     start () {
       const modes = [
-        { name: this.practiceMode, explanation: 'Check how many digits of pi you can name from the digit you set beforehand.' },
+        { name: this.practiceMode, explanation: 'Check how many digits of pi you can name from the point you designated.' },
         { name: this.realMode, explanation: 'Check how many digits of pi you can name.' },
         { name: this.showPiDigits, explanation: 'Check the first 100 digits of pi.' },
         { name: this.highScores, explanation: 'Check the high scores.' }
@@ -41,65 +94,48 @@
         choices: modes.map(mode => mode.name),
         footer () {
           const explanations = modes.map(mode => ' '.repeat(2) + mode.explanation)
-          return '\n' + explanations[this.index]
+          return chalk.green('\n' + explanations[this.index])
         }
       })
+
       prompt.run()
         .then(answer => {
           switch (answer) {
             case this.practiceMode:
+              new PracticeMode(this.pi_text).start()
               break;
             case this.realMode:
               break;
             case this.showPiDigits:
-              this.showPi()
+              new ShowPiMode(this.pi_text).start()
               break;
             case this.highScores:
               break;
           }
-          this.start()
         })
     }
+  }
 
-    startPracticeMode () {
+  class ShowPiMode {
+    constructor(pi_text = PI_TEXT) {
+      this.pi_text = pi_text
     }
-
-    showPi () {
-      // require('keypress')(process.stdin)
-      //   console.log('1415926535 8979323846 2643383279 5028841971 6939937510 5820974944 5923078164 0628620899 8628034825 3421170679' + '\n\nPress any key to finish.')
-      // console.log('1415926535 8979323846 2643383279 5028841971 6939937510 5820974944 5923078164 0628620899 8628034825 3421170679' + '\n')
-      // process.stdin.on('keypress', (ch, key) => {
-      //   console.clear()
-      // })
-      // process.stdin.setRawMode(true);
-      // process.stdin.resume();
+    start () {
       let sectionHeadIndex = 2
       const sectionDigits = 10
-      let pi_text = this.pi.slice(0, 2)
+      let pi_text = this.pi_text.slice(0, 2)
       for (let i = 0; i < 10; i++) {
         if (i !== 0) {
           pi_text += ' '
         }
-        pi_text += this.pi.substr(sectionHeadIndex + sectionDigits * i, 10)
+        pi_text += this.pi_text.substr(sectionHeadIndex + sectionDigits * i, 10)
       }
       console.log(pi_text)
     }
-
-    // async keypress () {
-    //   process.stdin.setRawMode(true)
-    //   return new Promise(resolve => process.stdin.once('data', data => {
-    //     const byteArray = [...data]
-    //     if (byteArray.length > 0 && byteArray[0] === 3) {
-    //       console.log('^C')
-    //       process.exit(1)
-    //     }
-    //     process.stdin.setRawMode(false)
-    //     resolve()
-    //   }))
-    // }
   }
-// (async () => {
-  new Game().start()
-//
-// })
+
+  const welcomeMessage = '>'.repeat(10) + ' PI GAME ' + '<'.repeat(10)
+  console.log(chalk.bold.green(welcomeMessage))
+  // new Game().start()
+  new PracticeMode().start()
 }
