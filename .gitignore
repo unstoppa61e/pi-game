@@ -1,3 +1,9 @@
+.gitignore
+node_modules
+.idea
+.eslintrc.yml
+high_scores.db
+
 # Logs
 logs
 *.log
