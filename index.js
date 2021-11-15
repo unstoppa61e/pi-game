@@ -15,12 +15,27 @@
     }
 
     start () {
+      const prompt = this.getStartingPointPrompt()
+      prompt.run()
+        .then(answer => {
+          if (answer < 1 || answer > 100) {
+            console.log(chalk.bold.red('Your input is out of the range.'))
+            process.exit()
+          }
+          const startIndex = answer - 1
+          this.startTypingSession(startIndex)
+        })
+        .catch(console.error)
+
+    }
+
+    startTypingSession (startIndex = 0) {
       const instruction = 'Keep typing in the number which fits the cursor position.'
-      process.stdout.write(chalk.bold.green(instruction) + '\n\n' + PI_START_TEXT)
+      let currentIndex = startIndex
+      process.stdout.write(chalk.bold.green(instruction) + '\n\n' + PI_START_TEXT + PI_BELOW_THE_DECIMAL_POINT.slice(0, startIndex))
       const readline = require('readline');
       readline.emitKeypressEvents(process.stdin)
       process.stdin.setRawMode(true);
-      let currentIndex = 0
       process.stdin.on('keypress', (char, key) => {
         if (key.ctrl && key.name === 'c') {
           process.exit();
@@ -31,12 +46,23 @@
           process.stdout.write(char)
           currentIndex++
         } else {
-          const scoreMessage = `Your score: ${currentIndex}`
+          const scoreMessage = `Your score: ${chalk.bold.green(currentIndex)}`
           const remaining_digits_text = this.make_remaining_digits_text(currentIndex)
-          console.log(chalk.red(remaining_digits_text) + '\n' + scoreMessage)
+          console.log(chalk.red(remaining_digits_text) + '\n\n' + scoreMessage)
           process.exit();
         }
       })
+    }
+
+
+    getStartingPointPrompt () {
+      const { NumberPrompt } = require('enquirer')
+      return new NumberPrompt({
+        name: 'number',
+        message: 'Set the starting point(1-100): '
+      })
+      // prompt.run()
+      // return prompt
     }
 
     putsCongratulations () {
@@ -136,6 +162,9 @@
 
   const welcomeMessage = '>'.repeat(10) + ' PI GAME ' + '<'.repeat(10)
   console.log(chalk.bold.green(welcomeMessage))
+
+  // This doesn't work as intended.
   // new Game().start()
+  // If you run just the next line, it works as intended.
   new PracticeMode().start()
 }
