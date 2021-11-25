@@ -8,55 +8,61 @@ const piStartText = '3.'
 const piBelowTheDecimalPoint = '1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679'
 const { Select } = require('enquirer')
 const chalk = require('chalk')
+const {resolve, reject} = require('eslint-plugin-promise/rules/lib/promise-statics')
+const readline = require('readline')
 const digitsNum = 100
 const piLastIndex = digitsNum - 1
 
 class PracticeMode {
   async start () {
-    const prompt = this.getStartingPointPrompt()
+    const prompt = await this.getStartingPointPrompt()
     const answer = await prompt.run()
     if (answer < 1 || answer > digitsNum) {
       console.log(chalk.bold.red('Your input is out of the range.'))
       process.exit()
     }
     const startIndex = answer - 1
-    this.startTypingSession(startIndex)
+    // console.log("\nstartIndex:", startIndex)
+    return this.startTypingSession(startIndex)
   }
 
+  // async startTypingSession (startIndex = 0) {
   startTypingSession (startIndex = 0) {
-    const instruction = 'Keep typing in the number which fits the cursor position.'
-    let currentIndex = startIndex
-    process.stdout.write(chalk.bold.green(instruction) + '\n\n' + piStartText + piBelowTheDecimalPoint.slice(0, startIndex))
-    const readline = require('readline')
-    readline.emitKeypressEvents(process.stdin)
-    process.stdin.setRawMode(true)
-    process.stdin.resume()
-    process.stdin.on('keypress', (char, key) => {
-      if (key.ctrl && key.name === 'c') {
-        process.exit();
-      } else if (currentIndex === piLastIndex && char === piBelowTheDecimalPoint[piLastIndex]) {
-        console.log(piBelowTheDecimalPoint[piLastIndex])
-        this.putsCongratulations()
-        process.stdin.pause()
-        // process.stdin.setRawMode(false)
-        // new Game().start()
-        // ここでインプットを受け付けるループを抜けて、新しいゲームを始めたい
-      } else if (char === piBelowTheDecimalPoint[currentIndex]) {
-        process.stdout.write(char)
-        currentIndex++
-      } else {
-        const scoreMessage = `Your score: ${chalk.bold.green(currentIndex)}`
-        const remaining_digits_text = this.make_remaining_digits_text(currentIndex)
-        console.log(chalk.red(remaining_digits_text) + '\n\n' + scoreMessage)
-        // ここでインプットを受け付けるループを抜けて、新しいゲームを始めたい
-        process.stdin.pause()
-        // process.stdin.setRawMode(false)
-        // new Game().start()
-      }
+    return new Promise((resolve, reject) => {
+      const instruction = 'Keep typing in the number which fits the cursor position.'
+      let currentIndex = startIndex
+      process.stdout.write(chalk.bold.green(instruction) + '\n\n' + piStartText + piBelowTheDecimalPoint.slice(0, startIndex))
+      const readline = require('readline')
+      readline.emitKeypressEvents(process.stdin)
+      process.stdin.setRawMode(true)
+      process.stdin.resume()
+      process.stdin.on('keypress', (char, key) => {
+        if (key.ctrl && key.name === 'c') {
+          process.exit();
+        } else if (currentIndex === piLastIndex && char === piBelowTheDecimalPoint[piLastIndex]) {
+          console.log(piBelowTheDecimalPoint[piLastIndex])
+          this.putsCongratulations()
+          this.breakLoop(resolve)
+        } else if (char === piBelowTheDecimalPoint[currentIndex]) {
+          process.stdout.write(char)
+          currentIndex++
+        } else {
+          const scoreMessage = `Your score: ${chalk.bold.green(currentIndex)}`
+          const remaining_digits_text = this.make_remaining_digits_text(currentIndex)
+          console.log(chalk.red(remaining_digits_text) + '\n\n' + scoreMessage)
+          this.breakLoop(resolve)
+        }
+      })
     })
+
+  }
+  breakLoop (resolve) {
+    process.stdin.removeAllListeners('keypress')
+    process.stdin.pause()
+    resolve()
   }
 
-  getStartingPointPrompt () {
+  async getStartingPointPrompt () {
     const { NumberPrompt } = require('enquirer')
     return new NumberPrompt({
       name: 'number',
@@ -105,7 +111,7 @@ class Game {
   }
 
   async start () {
-    console.log(process.stdin._events)
+    // console.log(process.stdin._events)
     const modes = [
       { name: this.practiceMode, explanation: 'Check how many digits of pi you can name from the point you designated.' },
       { name: this.realMode, explanation: 'Check how many digits of pi you can name.' },
@@ -122,21 +128,24 @@ class Game {
       }
     })
 
-    const answer = await prompt.run()
-    switch (answer) {
-      case this.practiceMode:
-        new PracticeMode(this.pi_text).start()
-        .catch(console.error)
-        break;
-      case this.realMode:
-        break;
-      case this.showPiDigits:
-        new ShowPiMode(this.pi_text).start()
-        break;
-      case this.highScores:
-        break;
-    }
-    new Game().start()
+    // const answer = await prompt.run()
+    prompt.run().then(answer => {
+      switch (answer) {
+        case this.practiceMode:
+          new PracticeMode(this.pi_text).start().then(promise => new Game().start())
+          // new PracticeMode(this.pi_text).start().then(promise => console.log('hoge'))
+          break;
+        case this.realMode:
+          break;
+        case this.showPiDigits:
+          new ShowPiMode(this.pi_text).start()
+          break;
+        case this.highScores:
+          break;
+
+      }
+    })
+    // new Game().start()
   }
 }
 
@@ -165,9 +174,6 @@ class ShowPiMode {
     console.log('Press any key to finish checking the digits.')
     process.stdin.once('data', () => {
       console.clear()
-      // process.stdin.once を使っているので、問題が起こらずに済んでいる
-      // ただこの方法だと、新しいループでは stdin.on._events に newListener が付いてしまうので、恐らく良くない
-      // new Game().start()
     })
   }
 }
@@ -175,4 +181,8 @@ class ShowPiMode {
 const welcomeMessage = '>'.repeat(10) + ' PI GAME ' + '<'.repeat(10)
 console.log(chalk.bold.green(welcomeMessage))
 
+console.log(process.stdin._events)
 new Game().start()
+// setTimeout(() => {
+//   console.log(process.stdin._events)
+// }, 10000)
