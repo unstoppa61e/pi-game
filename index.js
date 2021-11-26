@@ -2,15 +2,27 @@
 
 'use strict'
 
+const readline = require('readline')
+const chalk = require('chalk')
+const { Select } = require('enquirer')
+const { resolve, reject } = require('eslint-plugin-promise/rules/lib/promise-statics')
+
 const piText = '3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679'
 const piStartText = '3.'
 const piBelowTheDecimalPoint = '1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679'
-const { Select } = require('enquirer')
-const chalk = require('chalk')
-const {resolve, reject} = require('eslint-plugin-promise/rules/lib/promise-statics')
-const readline = require('readline')
 const digitsNum = 100
 const piLastIndex = digitsNum - 1
+
+function prepareProcessStdinForInput () {
+  readline.emitKeypressEvents(process.stdin)
+  process.stdin.setRawMode(true)
+  process.stdin.resume()
+}
+
+function putFarewell () {
+  console.clear()
+  console.log(chalk.bold.green('Thank you for playing, my friend!'))
+}
 
 class PracticeMode {
   async start () {
@@ -27,61 +39,36 @@ class PracticeMode {
     return this.startTypingSession(startIndex)
   }
 
-  // TODO: 多分消す
-  prepareProcessStdinForInput () {
-    require('readline').emitKeypressEvents(process.stdin)
-    process.stdin.setRawMode(true)
-    process.stdin.resume()
-  }
-
   async startTypingSession (startIndex = 0) {
     return new Promise((resolve, reject) => {
       let currentIndex = startIndex
-      const readline = require('readline')
-      readline.emitKeypressEvents(process.stdin)
-      process.stdin.setRawMode(true)
-      process.stdin.resume()
+      prepareProcessStdinForInput()
       process.stdin.on('keypress', (char, key) => {
         if (key.ctrl && key.name === 'c') {
+          console.clear()
+          putFarewell()
           process.exit();
         } else if (currentIndex === piLastIndex && char === piBelowTheDecimalPoint[piLastIndex]) {
           console.log(piBelowTheDecimalPoint[piLastIndex])
           this.putCongratulations()
-          // process.stdin.once('data', () => {
-            this.breakLoop(resolve)
-          // })
-          // this.breakLoop(resolve)
+          this.breakLoop(resolve)
         } else if (char === piBelowTheDecimalPoint[currentIndex]) {
           process.stdout.write(char)
           currentIndex++
         } else {
           const scoreMessage = `Your score: ${chalk.bold.green(currentIndex)}`
-          const remaining_digits_text = this.make_remaining_digits_text(currentIndex)
-          console.log(chalk.red(remaining_digits_text) + '\n\n' + scoreMessage)
-          // process.stdin.once('data', (resolve, reject) => { resolve() }).then(resolve => {
-          //
-          // })
-          // this.prepareProcessStdinForInput()
-          // process.stdin.once('data', () => {
-          // // this.promptPressingKey().then(promise => {
+          const remainingDigitsText = this.make_remaining_digits_text(currentIndex)
+          console.log(chalk.red(remainingDigitsText) + '\n\n' + scoreMessage)
           this.breakLoop(resolve)
-          // })
-          // })
         }
       })
     })
   }
-  // promptPressingKey () {
-  //   return new Promise((resolve, reject) => {
-  //     console.log('Press any key to return to the mode selection.')
-  //     process.stdin.once('data', () => {})
-  //   })
-  // }
+
   breakLoop (resolve) {
       process.stdin.removeAllListeners('keypress')
       process.stdin.pause()
       resolve()
-    // resolve()
   }
 
   async getStartingPointPrompt () {
@@ -130,14 +117,6 @@ class ShowPiMode {
     this.pi_text = pi_text
   }
 
-  // start () {
-  //   return new Promise((resolve, reject) => {
-  //     this.putPiText()
-  //     this.prepareProcessStdinForInput()
-  //     console.log('Press any key to return to the mode selection.')
-  //     process.stdin.once('data', () => { resolve() })
-  //   })
-  // }
   start () {
     return new Promise((resolve, reject) => {
       this.putPiText()
@@ -145,15 +124,9 @@ class ShowPiMode {
     })
   }
 
-  // prepareProcessStdinForInput () {
-  //   require('readline').emitKeypressEvents(process.stdin)
-  //   process.stdin.setRawMode(true)
-  //   process.stdin.resume()
-  // }
-
   putPiText () {
     const pi_text = this.buildSeparatedPiText()
-    console.log(pi_text + "\n")
+    console.log(pi_text)
   }
 
   buildSeparatedPiText () {
@@ -175,9 +148,6 @@ class ShowPiMode {
 
 class Game {
   constructor () {
-    const sqlite3 = require('sqlite3').verbose()
-    this.db = new sqlite3.Database('./high_scores.db')
-    this.db.run('create table if not exists notes(id integer primary key, score integer)')
     this.practiceModeText = 'PRACTICE MODE'
     this.realModeText = 'REAL MODE'
     this.showPiDigitsModeText = 'SHOW PI DIGITS'
@@ -219,21 +189,17 @@ class Game {
     const prompt = await this.buildPrompt()
     prompt.run().then(answer => {
       console.clear()
-      this.playMode(answer).then(promise => {
-        this.prepareProcessStdinForInput()
-        console.log('Press any key to return to the mode selection.')
-        process.stdin.once('data', () => {
-          console.clear()
-          new Game().start()
+      this.playMode(answer)
+        .then(() => {
+          prepareProcessStdinForInput()
+          console.log('\nPress any key to return to the mode selection.')
+          process.stdin.once('data', () => {
+            console.clear()
+            new Game().start()
+          })
         })
-      })
+        .catch(() => putFarewell())
     })
-  }
-
-  prepareProcessStdinForInput () {
-    require('readline').emitKeypressEvents(process.stdin)
-    process.stdin.setRawMode(true)
-    process.stdin.resume()
   }
 
   buildWelcomeMessage () {
@@ -247,7 +213,6 @@ class Game {
     console.log(chalk.bold.green(welcomeMessage) + '\n')
   }
 
-
   playMode (answer) {
     switch (answer) {
       case this.practiceModeText:
@@ -257,7 +222,7 @@ class Game {
       case this.showPiDigitsModeText:
         return new ShowPiMode(this.pi_text).start()
       case this.quittingText:
-        console.log(chalk.bold.green('\nThank you for playing'))
+        putFarewell()
         process.exit()
     }
   }
