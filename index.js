@@ -51,7 +51,7 @@ class typingMode {
   }
 
   async startTypingSession (startIndex, isRealMode) {
-    return new Promise((resolve, reject) => {
+    // return new Promise((resolve, reject) => {
       prepareProcessStdinForInput()
       const piLastNumber = belowDecimalPointText.slice(-1)
       const piLastIndex = belowDecimalPointText.length - 1
@@ -73,16 +73,18 @@ class typingMode {
           const scoreMessage = `Your ${result}: ${chalk.bold.green(currentIndex)}`
           const remainingDigitsText = this.make_remaining_digits_text(currentIndex)
           console.log(chalk.red(remainingDigitsText) + '\n\n' + scoreMessage)
-          this.breakLoop(resolve)
+          // this.breakLoop(resolve)
+          this.breakLoop()
         }
       })
-    })
+    // })
   }
 
-  breakLoop (resolve) {
+  // breakLoop (resolve) {
+  breakLoop () {
       process.stdin.removeAllListeners('keypress')
       process.stdin.pause()
-      resolve()
+      // resolve()
   }
 
   async getStartingPointPrompt () {
