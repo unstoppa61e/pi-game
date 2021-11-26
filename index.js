@@ -27,7 +27,10 @@ function putFarewell () {
 class PracticeMode {
   async start () {
     const prompt = await this.getStartingPointPrompt()
-    const answer = await prompt.run()
+    const answer = await prompt.run().catch(() => {
+      putFarewell()
+      process.exit()
+    })
     console.clear()
     if (answer < 1 || answer > digitsNum) {
       console.log(chalk.bold.red('Your input is out of the range.'))
@@ -41,11 +44,10 @@ class PracticeMode {
 
   async startTypingSession (startIndex = 0) {
     return new Promise((resolve, reject) => {
-      let currentIndex = startIndex
       prepareProcessStdinForInput()
+      let currentIndex = startIndex
       process.stdin.on('keypress', (char, key) => {
         if (key.ctrl && key.name === 'c') {
-          console.clear()
           putFarewell()
           process.exit();
         } else if (currentIndex === piLastIndex && char === piBelowTheDecimalPoint[piLastIndex]) {
@@ -112,16 +114,8 @@ class PracticeMode {
 }
 
 class ShowPiMode {
-  // TODO: 多分要らない
-  constructor(pi_text = piText) {
-    this.pi_text = pi_text
-  }
-
-  start () {
-    return new Promise((resolve, reject) => {
-      this.putPiText()
-      resolve()
-    })
+  async start () {
+    this.putPiText()
   }
 
   putPiText () {
@@ -133,14 +127,14 @@ class ShowPiMode {
     // TODO: もっと良い方法
     const sectionHeadIndex = 2
     const sectionDigits = 10
-    let pi_text = this.pi_text.slice(0, 2)
+    let pi_text = piText.slice(0, 2)
     for (let i = 0; i < 10; i++) {
       if (i !== 0 && i % 5 === 0) {
         pi_text += "\n  "
       } else if (i !== 0) {
         pi_text += ' '
       }
-      pi_text += this.pi_text.substr(sectionHeadIndex + sectionDigits * i, 10)
+      pi_text += piText.substr(sectionHeadIndex + sectionDigits * i, 10)
     }
     return pi_text
   }
@@ -186,19 +180,15 @@ class Game {
 
   async start () {
     this.putWelcomeMessage()
-    const prompt = await this.buildPrompt()
-    prompt.run().then(answer => {
+    const prompt = await this.buildPrompt().catch(() => putFarewell())
+    const answer = await prompt.run().catch(() => putFarewell())
+    console.clear()
+    await this.playMode(answer).catch(() => putFarewell())
+    prepareProcessStdinForInput()
+    console.log('\nPress any key to return to the mode selection.')
+    process.stdin.once('data', () => {
       console.clear()
-      this.playMode(answer)
-        .then(() => {
-          prepareProcessStdinForInput()
-          console.log('\nPress any key to return to the mode selection.')
-          process.stdin.once('data', () => {
-            console.clear()
-            new Game().start()
-          })
-        })
-        .catch(() => putFarewell())
+      new Game().start()
     })
   }
 
@@ -216,11 +206,11 @@ class Game {
   playMode (answer) {
     switch (answer) {
       case this.practiceModeText:
-        return new PracticeMode(this.pi_text).start()
+        return new PracticeMode().start()
       case this.realModeText:
         break;
       case this.showPiDigitsModeText:
-        return new ShowPiMode(this.pi_text).start()
+        return new ShowPiMode().start()
       case this.quittingText:
         putFarewell()
         process.exit()
@@ -228,4 +218,4 @@ class Game {
   }
 }
 
-new Game().start()
+new Game().start().catch(() => putFarewell())
