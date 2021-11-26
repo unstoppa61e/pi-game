@@ -2,7 +2,6 @@
 
 'use strict'
 
-
 const piText = '3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679'
 const piStartText = '3.'
 const piBelowTheDecimalPoint = '1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679'
@@ -100,30 +99,79 @@ class PracticeMode {
   }
 }
 
+class ShowPiMode {
+  // TODO: 多分要らない
+  constructor(pi_text = piText) {
+    this.pi_text = pi_text
+  }
+
+  start () {
+    return new Promise((resolve, reject) => {
+      this.putPiText()
+      // const readline = require('readline')
+      // readline.emitKeypressEvents(process.stdin)
+      require('readline').emitKeypressEvents(process.stdin)
+      process.stdin.setRawMode(true)
+      process.stdin.resume()
+      console.log('Press any key to finish checking the digits.')
+      // TODO: ここで resolve 返す
+      process.stdin.once('data', () => {
+        console.clear()
+        resolve()
+      })
+    })
+  }
+
+  putPiText () {
+    const pi_text = this.buildSeparatedPiText()
+    console.log("\n" + pi_text + "\n")
+  }
+
+  buildSeparatedPiText () {
+    // TODO: もっと良い方法
+    const sectionHeadIndex = 2
+    const sectionDigits = 10
+    let pi_text = this.pi_text.slice(0, 2)
+    for (let i = 0; i < 10; i++) {
+      if (i !== 0 && i % 5 === 0) {
+        pi_text += "\n  "
+      } else if (i !== 0) {
+        pi_text += ' '
+      }
+      pi_text += this.pi_text.substr(sectionHeadIndex + sectionDigits * i, 10)
+    }
+    return pi_text
+  }
+}
+
 class Game {
   constructor () {
     const sqlite3 = require('sqlite3').verbose()
     this.db = new sqlite3.Database('./high_scores.db')
     this.db.run('create table if not exists notes(id integer primary key, score integer)')
-    this.practiceMode = 'PRACTICE MODE'
-    this.realMode = 'REAL MODE（未実装）'
-    this.showPiDigits = 'SHOW PI DIGITS'
-    this.highScores = 'HIGH SCORES（未実装）'
+    this.practiceModeText = 'PRACTICE MODE'
+    this.realModeText = 'REAL MODE'
+    this.showPiDigitsModeText = 'SHOW PI DIGITS'
+    this.quittingText = 'QUIT'
   }
 
   async buildPrompt () {
     const modes = [
       {
-        name: this.practiceMode,
+        name: this.practiceModeText,
         explanation: 'Check how many digits of pi you can name from the point you designated.'
       },
       {
-        name: this.realMode,
+        name: this.realModeText,
         explanation: 'Check how many digits of pi you can name.'
       },
       {
-        name: this.showPiDigits,
+        name: this.showPiDigitsModeText,
         explanation: 'Check the first 100 digits of pi.'
+      },
+      {
+        name: this.quittingText,
+        explanation: 'Quit the game.'
       }
     ]
     return new Select({
@@ -146,42 +194,16 @@ class Game {
 
   playMode (answer) {
     switch (answer) {
-      case this.practiceMode:
+      case this.practiceModeText:
         return new PracticeMode(this.pi_text).start()
-      case this.realMode:
+      case this.realModeText:
         break;
-      case this.showPiDigits:
+      case this.showPiDigitsModeText:
         return new ShowPiMode(this.pi_text).start()
+      case this.quittingText:
+        console.log(chalk.bold.green('\nThank you for playing'))
+        process.exit()
     }
-  }
-}
-
-class ShowPiMode {
-  constructor(pi_text = piText) {
-    this.pi_text = pi_text
-  }
-
-  async start () {
-    const sectionHeadIndex = 2
-    const sectionDigits = 10
-    let pi_text = this.pi_text.slice(0, 2)
-    for (let i = 0; i < 10; i++) {
-      if (i !== 0 && i % 5 === 0) {
-        pi_text += "\n  "
-      } else if (i !== 0) {
-        pi_text += ' '
-      }
-      pi_text += this.pi_text.substr(sectionHeadIndex + sectionDigits * i, 10)
-    }
-    console.log("\n" + pi_text + "\n")
-    const readline = require('readline')
-    readline.emitKeypressEvents(process.stdin)
-    process.stdin.setRawMode(true)
-    process.stdin.resume()
-    console.log('Press any key to finish checking the digits.')
-    process.stdin.once('data', () => {
-      console.clear()
-    })
   }
 }
 
