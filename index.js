@@ -26,7 +26,14 @@ class PracticeMode {
     return this.startTypingSession(startIndex)
   }
 
-  startTypingSession (startIndex = 0) {
+  // TODO: 多分消す
+  prepareProcessStdinForInput () {
+    require('readline').emitKeypressEvents(process.stdin)
+    process.stdin.setRawMode(true)
+    process.stdin.resume()
+  }
+
+  async startTypingSession (startIndex = 0) {
     return new Promise((resolve, reject) => {
       let currentIndex = startIndex
       const readline = require('readline')
@@ -38,8 +45,11 @@ class PracticeMode {
           process.exit();
         } else if (currentIndex === piLastIndex && char === piBelowTheDecimalPoint[piLastIndex]) {
           console.log(piBelowTheDecimalPoint[piLastIndex])
-          this.putsCongratulations()
-          this.breakLoop(resolve)
+          this.putCongratulations()
+          // process.stdin.once('data', () => {
+            this.breakLoop(resolve)
+          // })
+          // this.breakLoop(resolve)
         } else if (char === piBelowTheDecimalPoint[currentIndex]) {
           process.stdout.write(char)
           currentIndex++
@@ -47,16 +57,30 @@ class PracticeMode {
           const scoreMessage = `Your score: ${chalk.bold.green(currentIndex)}`
           const remaining_digits_text = this.make_remaining_digits_text(currentIndex)
           console.log(chalk.red(remaining_digits_text) + '\n\n' + scoreMessage)
+          // process.stdin.once('data', (resolve, reject) => { resolve() }).then(resolve => {
+          //
+          // })
+          // this.prepareProcessStdinForInput()
+          // process.stdin.once('data', () => {
+          // // this.promptPressingKey().then(promise => {
           this.breakLoop(resolve)
+          // })
+          // })
         }
       })
     })
-
   }
+  // promptPressingKey () {
+  //   return new Promise((resolve, reject) => {
+  //     console.log('Press any key to return to the mode selection.')
+  //     process.stdin.once('data', () => {})
+  //   })
+  // }
   breakLoop (resolve) {
-    process.stdin.removeAllListeners('keypress')
-    process.stdin.pause()
-    resolve()
+      process.stdin.removeAllListeners('keypress')
+      process.stdin.pause()
+      resolve()
+    // resolve()
   }
 
   async getStartingPointPrompt () {
@@ -67,7 +91,7 @@ class PracticeMode {
     })
   }
 
-  putsCongratulations () {
+  putCongratulations () {
     const message = this.buildCongratulationsMessage()
     console.log(chalk.bold.green(message))
   }
@@ -108,23 +132,30 @@ class ShowPiMode {
   start () {
     return new Promise((resolve, reject) => {
       this.putPiText()
-      // const readline = require('readline')
-      // readline.emitKeypressEvents(process.stdin)
-      require('readline').emitKeypressEvents(process.stdin)
-      process.stdin.setRawMode(true)
-      process.stdin.resume()
-      console.log('Press any key to finish checking the digits.')
-      // TODO: ここで resolve 返す
-      process.stdin.once('data', () => {
-        console.clear()
-        resolve()
-      })
+      this.prepareProcessStdinForInput()
+      console.log('Press any key to return to the mode selection.')
+      process.stdin.once('data', () => { resolve() })
     })
+  }
+  // start () {
+  //   return new Promise((resolve, reject) => {
+  //     this.putPiText()
+  //     resolve()
+  //     this.prepareProcessStdinForInput()
+  //     console.log('Press any key to return to the mode selection.')
+  //     process.stdin.once('data', () => { resolve() })
+  //   })
+  // }
+
+  prepareProcessStdinForInput () {
+    require('readline').emitKeypressEvents(process.stdin)
+    process.stdin.setRawMode(true)
+    process.stdin.resume()
   }
 
   putPiText () {
     const pi_text = this.buildSeparatedPiText()
-    console.log("\n" + pi_text + "\n")
+    console.log(pi_text + "\n")
   }
 
   buildSeparatedPiText () {
@@ -186,11 +217,25 @@ class Game {
   }
 
   async start () {
+    this.putWelcomeMessage()
     const prompt = await this.buildPrompt()
     prompt.run().then(answer => {
+      console.clear()
       this.playMode(answer).then(promise => new Game().start())
     })
   }
+
+  buildWelcomeMessage () {
+    const repeatingTimes = 10
+    return '>'.repeat(repeatingTimes) + ' PI GAME ' + '<'.repeat(repeatingTimes)
+  }
+
+  putWelcomeMessage () {
+    console.clear()
+    const welcomeMessage = this.buildWelcomeMessage()
+    console.log(chalk.bold.green(welcomeMessage) + '\n')
+  }
+
 
   playMode (answer) {
     switch (answer) {
@@ -206,9 +251,5 @@ class Game {
     }
   }
 }
-
-const repeatingTimes = 10
-const welcomeMessage = '>'.repeat(repeatingTimes) + ' PI GAME ' + '<'.repeat(repeatingTimes)
-console.log(chalk.bold.green(welcomeMessage))
 
 new Game().start()
