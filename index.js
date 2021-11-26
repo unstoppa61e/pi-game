@@ -33,7 +33,7 @@ class TypingMode {
       await this.start({ isRealMode: false })
       return
     }
-    const instruction = 'Keep typing in the number which fits the cursor position.'
+    const instruction = 'Start typing pi.'
     console.clear()
     process.stdout.write(chalk.bold.green(instruction) + '\n\n' + piStartText + belowDecimalPointText.slice(0, startIndex))
     await this.startTypingSession(startIndex, isRealMode)
@@ -43,7 +43,7 @@ class TypingMode {
     const prompt = await this.getStartingPointPrompt().catch(() => { quitGame() })
     const answer = await prompt.run().catch(() => { quitGame() })
     if (answer < 1 || answer > belowDecimalPointText.length) {
-      console.log(chalk.bold.red('Your input is out of the range.'))
+      console.log(chalk.bold.red('Your input is out of range.'))
       return this.outOfRange
     }
     return answer - 1
@@ -53,7 +53,7 @@ class TypingMode {
     const { NumberPrompt } = require('enquirer')
     return new NumberPrompt({
       name: 'number',
-      message: 'Set the starting point(1-100): '
+      message: 'Set your designated point(1-100): '
     })
   }
 
@@ -189,7 +189,7 @@ class Game {
     const modes = [
       {
         name: this.practiceModeText,
-        explanation: 'Check how many digits of pi you can name from the point you designated.'
+        explanation: 'Check how many digits of pi you can name from a point you designate.'
       },
       {
         name: this.realModeText,
@@ -230,7 +230,7 @@ class Game {
 
   leadToNextGame () {
     prepareProcessStdinForInput()
-    console.log('\nPress any key to return to the mode selection.')
+    console.log('\nPress any key to return to mode selection.')
     process.stdin.once('data', () => {
       console.clear()
       new Game().start().catch(() => quitGame())
