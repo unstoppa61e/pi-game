@@ -7,10 +7,10 @@ const chalk = require('chalk')
 const { Select } = require('enquirer')
 const { resolve, reject } = require('eslint-plugin-promise/rules/lib/promise-statics')
 
-const piText = '3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679'
 const piStartText = '3.'
 const piBelowTheDecimalPoint = '1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679'
 const digitsNum = 100
+const sectionDigitsNum = 10
 const piLastIndex = digitsNum - 1
 
 function prepareProcessStdinForInput () {
@@ -19,18 +19,16 @@ function prepareProcessStdinForInput () {
   process.stdin.resume()
 }
 
-function putFarewell () {
+function quitGame () {
   console.clear()
   console.log(chalk.bold.green('Thank you for playing, my friend!'))
+  process.exit()
 }
 
 class PracticeMode {
   async start () {
     const prompt = await this.getStartingPointPrompt()
-    const answer = await prompt.run().catch(() => {
-      putFarewell()
-      process.exit()
-    })
+    const answer = await prompt.run().catch(() => { quitGame() })
     console.clear()
     if (answer < 1 || answer > digitsNum) {
       console.log(chalk.bold.red('Your input is out of the range.'))
@@ -48,8 +46,7 @@ class PracticeMode {
       let currentIndex = startIndex
       process.stdin.on('keypress', (char, key) => {
         if (key.ctrl && key.name === 'c') {
-          putFarewell()
-          process.exit();
+          quitGame()
         } else if (currentIndex === piLastIndex && char === piBelowTheDecimalPoint[piLastIndex]) {
           console.log(piBelowTheDecimalPoint[piLastIndex])
           this.putCongratulations()
@@ -99,7 +96,6 @@ class PracticeMode {
 
   make_remaining_digits_text (currentIndex) {
     let remaining_digits_text = ''
-    const sectionDigitsNum = 10
     const lineDigitsNum = 50
     for (let i = currentIndex; i < digitsNum; i++) {
       if (i  === lineDigitsNum) {
@@ -124,20 +120,16 @@ class ShowPiMode {
   }
 
   buildSeparatedPiText () {
-    // TODO: もっと良い方法
-    const sectionHeadIndex = 2
-    const sectionDigits = 10
-    // let pi_text = piText.slice(0, 2)
-    let pi_text = piStartText
-    for (let i = 0; i < 10; i++) {
-      if (i !== 0 && i % 5 === 0) {
-        pi_text += "\n  "
-      } else if (i !== 0) {
-        pi_text += ' '
-      }
-      pi_text += piText.substr(sectionHeadIndex + sectionDigits * i, 10)
+    let piTextSections = []
+    for (let i = 0; i < piBelowTheDecimalPoint.length; i += sectionDigitsNum) {
+      piTextSections.push(piBelowTheDecimalPoint.substring(i, i + sectionDigitsNum))
     }
-    return pi_text
+    const sectionsNumPerLine = 5
+    let piTextBlocks = []
+    for (let i = 0; i < piTextSections.length; i += sectionsNumPerLine) {
+      piTextBlocks.push(piTextSections.slice(i, i + sectionsNumPerLine).join(' '))
+    }
+    return piStartText + piTextBlocks.join('\n  ')
   }
 }
 
@@ -181,15 +173,14 @@ class Game {
 
   async start () {
     this.putWelcomeMessage()
-    const prompt = await this.buildPrompt().catch(() => putFarewell())
-    const answer = await prompt.run().catch(() => putFarewell())
-    console.clear()
-    await this.playMode(answer).catch(() => putFarewell())
+    const prompt = await this.buildPrompt().catch(() => quitGame())
+    const answer = await prompt.run().catch(() => quitGame())
+    await this.playMode(answer).catch(() => quitGame())
     prepareProcessStdinForInput()
     console.log('\nPress any key to return to the mode selection.')
     process.stdin.once('data', () => {
       console.clear()
-      new Game().start()
+      new Game().start().catch(() => quitGame())
     })
   }
 
@@ -204,7 +195,7 @@ class Game {
     console.log(chalk.bold.green(welcomeMessage) + '\n')
   }
 
-  playMode (answer) {
+  async playMode (answer) {
     switch (answer) {
       case this.practiceModeText:
         return new PracticeMode().start()
@@ -213,10 +204,9 @@ class Game {
       case this.showPiDigitsModeText:
         return new ShowPiMode().start()
       case this.quittingText:
-        putFarewell()
-        process.exit()
+        quitGame()
     }
   }
 }
 
-new Game().start().catch(() => putFarewell())
+new Game().start().catch(() => quitGame())
