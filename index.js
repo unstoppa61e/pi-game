@@ -5,7 +5,6 @@
 const readline = require('readline')
 const chalk = require('chalk')
 const { Select } = require('enquirer')
-const { resolve, reject } = require('eslint-plugin-promise/rules/lib/promise-statics')
 
 const piText = '3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679'
 const piStartText = '3.'
@@ -23,15 +22,15 @@ function quitGame () {
   process.exit()
 }
 
-class typingMode {
+class TypingMode {
   constructor () {
     this.outOfRange = -1
   }
 
-  async start ({isRealMode}) {
+  async start ({ isRealMode }) {
     const startIndex = isRealMode ? 0 : await this.getStartIndex()
     if (startIndex === this.outOfRange) {
-      await this.start({isRealMode: false})
+      await this.start({ isRealMode: false })
       return
     }
     const instruction = 'Keep typing in the number which fits the cursor position.'
@@ -48,6 +47,14 @@ class typingMode {
       return this.outOfRange
     }
     return answer - 1
+  }
+
+  async getStartingPointPrompt () {
+    const { NumberPrompt } = require('enquirer')
+    return new NumberPrompt({
+      name: 'number',
+      message: 'Set the starting point(1-100): '
+    })
   }
 
   async startTypingSession (startIndex, isRealMode) {
@@ -69,33 +76,13 @@ class typingMode {
           process.stdout.write(char)
           currentIndex++
         } else {
-          const endingIndexMessage
-            = this.makeEndingIndexMessage({endingIndex: currentIndex, isRealMode: isRealMode})
+          const endingIndexMessage =
+            this.makeEndingIndexMessage({ endingIndex: currentIndex, isRealMode: isRealMode })
           const remainingDigitsText = this.make_remaining_digits_text(currentIndex)
           console.log(chalk.red(remainingDigitsText) + '\n\n' + endingIndexMessage)
           this.breakLoop(resolve)
         }
       })
-    })
-  }
-
-  makeEndingIndexMessage ({endingIndex, isRealMode}) {
-    const resultType = isRealMode ? 'score' : 'ending point'
-    const resultNum = isRealMode ? endingIndex : (endingIndex + 1)
-    return `Your ${resultType}: ${chalk.bold.green(resultNum)}`
-  }
-
-  breakLoop (resolve) {
-      process.stdin.removeAllListeners('keypress')
-      process.stdin.pause()
-      resolve()
-  }
-
-  async getStartingPointPrompt () {
-    const { NumberPrompt } = require('enquirer')
-    return new NumberPrompt({
-      name: 'number',
-      message: 'Set the starting point(1-100): '
     })
   }
 
@@ -115,11 +102,23 @@ class typingMode {
     }).join('')
   }
 
+  makeEndingIndexMessage ({ endingIndex, isRealMode }) {
+    const resultType = isRealMode ? 'score' : 'ending point'
+    const resultNum = isRealMode ? endingIndex : (endingIndex + 1)
+    return `Your ${resultType}: ${chalk.bold.green(resultNum)}`
+  }
+
+  breakLoop (resolve) {
+    process.stdin.removeAllListeners('keypress')
+    process.stdin.pause()
+    resolve()
+  }
+
   make_remaining_digits_text (currentIndex) {
     let remaining_digits_text = ''
     const lineDigitsNum = 50
     for (let i = currentIndex; i < belowDecimalPointText.length; i++) {
-      if (i  === lineDigitsNum) {
+      if (i === lineDigitsNum) {
         remaining_digits_text += '\n' + ' '.repeat(piStartText.length)
       } else if (i !== 0 && i % sectionDigitsNum === 0) {
         remaining_digits_text += ' '
@@ -141,12 +140,12 @@ class ShowPiMode {
   }
 
   buildSeparatedPiText () {
-    let piTextSections = []
+    const piTextSections = []
     for (let i = 0; i < belowDecimalPointText.length; i += sectionDigitsNum) {
       piTextSections.push(belowDecimalPointText.substring(i, i + sectionDigitsNum))
     }
     const sectionsNumPerLine = 5
-    let piTextBlocks = []
+    const piTextBlocks = []
     for (let i = 0; i < piTextSections.length; i += sectionsNumPerLine) {
       piTextBlocks.push(piTextSections.slice(i, i + sectionsNumPerLine).join(' '))
     }
@@ -160,6 +159,30 @@ class Game {
     this.realModeText = 'REAL MODE'
     this.showPiDigitsModeText = 'SHOW PI DIGITS'
     this.quittingText = 'QUIT'
+  }
+
+  async start () {
+    this.putWelcomeMessage()
+    const selectedModeName = await this.getSelectedModeName()
+    await this.playMode(selectedModeName).catch(() => quitGame())
+    this.leadToNextGame()
+  }
+
+  putWelcomeMessage () {
+    console.clear()
+    const welcomeMessage = this.buildWelcomeMessage()
+    console.log(chalk.bold.green(welcomeMessage) + '\n')
+  }
+
+  buildWelcomeMessage () {
+    const repeatingTimes = 10
+    return '>'.repeat(repeatingTimes) + ' PI GAME ' + '<'.repeat(repeatingTimes)
+  }
+
+  async getSelectedModeName () {
+    const prompt = await this.buildPrompt().catch(() => quitGame())
+    const selectedModeName = await prompt.run().catch(() => quitGame())
+    return selectedModeName
   }
 
   async buildPrompt () {
@@ -192,11 +215,17 @@ class Game {
     })
   }
 
-  async start () {
-    this.putWelcomeMessage()
-    const selectedModeName = await this.getSelectedModeName()
-    await this.playMode(selectedModeName).catch(() => quitGame())
-    this.leadToNextGame()
+  async playMode (modeName) {
+    switch (modeName) {
+      case this.practiceModeText:
+        return new TypingMode().start({ isRealMode: false })
+      case this.realModeText:
+        return new TypingMode().start({ isRealMode: true })
+      case this.showPiDigitsModeText:
+        return new ShowPiMode().start()
+      case this.quittingText:
+        quitGame()
+    }
   }
 
   leadToNextGame () {
@@ -206,36 +235,6 @@ class Game {
       console.clear()
       new Game().start().catch(() => quitGame())
     })
-  }
-
-  async getSelectedModeName () {
-    const prompt = await this.buildPrompt().catch(() => quitGame())
-    const selectedModeName = await prompt.run().catch(() => quitGame())
-    return selectedModeName
-  }
-
-  buildWelcomeMessage () {
-    const repeatingTimes = 10
-    return '>'.repeat(repeatingTimes) + ' PI GAME ' + '<'.repeat(repeatingTimes)
-  }
-
-  putWelcomeMessage () {
-    console.clear()
-    const welcomeMessage = this.buildWelcomeMessage()
-    console.log(chalk.bold.green(welcomeMessage) + '\n')
-  }
-
-  async playMode (modeName) {
-    switch (modeName) {
-      case this.practiceModeText:
-        return new typingMode().start({isRealMode: false})
-      case this.realModeText:
-        return new typingMode().start({isRealMode: true})
-      case this.showPiDigitsModeText:
-        return new ShowPiMode().start()
-      case this.quittingText:
-        quitGame()
-    }
   }
 }
 
