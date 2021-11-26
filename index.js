@@ -127,7 +127,8 @@ class ShowPiMode {
     // TODO: もっと良い方法
     const sectionHeadIndex = 2
     const sectionDigits = 10
-    let pi_text = piText.slice(0, 2)
+    // let pi_text = piText.slice(0, 2)
+    let pi_text = piStartText
     for (let i = 0; i < 10; i++) {
       if (i !== 0 && i % 5 === 0) {
         pi_text += "\n  "
