@@ -7,11 +7,10 @@ const chalk = require('chalk')
 const { Select } = require('enquirer')
 const { resolve, reject } = require('eslint-plugin-promise/rules/lib/promise-statics')
 
+const piText = '3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679'
 const piStartText = '3.'
-const piBelowTheDecimalPoint = '1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679'
-const digitsNum = 100
+const belowDecimalPointText = piText.substring(piStartText.length)
 const sectionDigitsNum = 10
-const piLastIndex = digitsNum - 1
 
 function prepareProcessStdinForInput () {
   readline.emitKeypressEvents(process.stdin)
@@ -20,42 +19,58 @@ function prepareProcessStdinForInput () {
 }
 
 function quitGame () {
-  console.clear()
-  console.log(chalk.bold.green('Thank you for playing, my friend!'))
+  console.log(chalk.bold.green('\nThank you for playing, my friend!'))
   process.exit()
 }
 
-class PracticeMode {
-  async start () {
-    const prompt = await this.getStartingPointPrompt()
-    const answer = await prompt.run().catch(() => { quitGame() })
-    console.clear()
-    if (answer < 1 || answer > digitsNum) {
-      console.log(chalk.bold.red('Your input is out of the range.'))
-      return this.start()
-    }
-    const startIndex = answer - 1
-    const instruction = 'Keep typing in the number which fits the cursor position.'
-    process.stdout.write(chalk.bold.green(instruction) + '\n\n' + piStartText + piBelowTheDecimalPoint.slice(0, startIndex))
-    return this.startTypingSession(startIndex)
+class typingMode {
+  constructor () {
+    this.outOfRange = -1
   }
 
-  async startTypingSession (startIndex = 0) {
+  async start ({isRealMode}) {
+    const startIndex = isRealMode ? 0 : await this.getStartIndex()
+    if (startIndex === this.outOfRange) {
+      await this.start({isRealMode: false})
+      return
+    }
+    const instruction = 'Keep typing in the number which fits the cursor position.'
+    console.clear()
+    process.stdout.write(chalk.bold.green(instruction) + '\n\n' + piStartText + belowDecimalPointText.slice(0, startIndex))
+    return this.startTypingSession(startIndex, isRealMode)
+  }
+
+  async getStartIndex () {
+    const prompt = await this.getStartingPointPrompt().catch(() => { quitGame() })
+    const answer = await prompt.run().catch(() => { quitGame() })
+    if (answer < 1 || answer > belowDecimalPointText.length) {
+      console.log(chalk.bold.red('Your input is out of the range.'))
+      return this.outOfRange
+    }
+    return answer - 1
+  }
+
+  async startTypingSession (startIndex, isRealMode) {
     return new Promise((resolve, reject) => {
       prepareProcessStdinForInput()
+      const piLastNumber = belowDecimalPointText.slice(-1)
+      const piLastIndex = belowDecimalPointText.length - 1
       let currentIndex = startIndex
       process.stdin.on('keypress', (char, key) => {
         if (key.ctrl && key.name === 'c') {
           quitGame()
-        } else if (currentIndex === piLastIndex && char === piBelowTheDecimalPoint[piLastIndex]) {
-          console.log(piBelowTheDecimalPoint[piLastIndex])
-          this.putCongratulations()
+        } else if (currentIndex === piLastIndex && char === piLastNumber) {
+          console.log(piLastNumber)
+          if (isRealMode) {
+            this.putCongratulations()
+          }
           this.breakLoop(resolve)
-        } else if (char === piBelowTheDecimalPoint[currentIndex]) {
+        } else if (char === belowDecimalPointText[currentIndex]) {
           process.stdout.write(char)
           currentIndex++
         } else {
-          const scoreMessage = `Your score: ${chalk.bold.green(currentIndex)}`
+          const result = isRealMode ? 'score' : 'ending point'
+          const scoreMessage = `Your ${result}: ${chalk.bold.green(currentIndex)}`
           const remainingDigitsText = this.make_remaining_digits_text(currentIndex)
           console.log(chalk.red(remainingDigitsText) + '\n\n' + scoreMessage)
           this.breakLoop(resolve)
@@ -87,7 +102,7 @@ class PracticeMode {
     const headSpaces = ' '.repeat(6)
     const sentences = [
       'Congratulations!',
-      `You have memorized the first ${digitsNum} digits of pi.`
+      `You have memorized the first ${belowDecimalPointText.length} digits of pi.`
     ]
     return sentences.map(sentence => {
       return headSpaces + sentence + '\n'
@@ -97,13 +112,13 @@ class PracticeMode {
   make_remaining_digits_text (currentIndex) {
     let remaining_digits_text = ''
     const lineDigitsNum = 50
-    for (let i = currentIndex; i < digitsNum; i++) {
+    for (let i = currentIndex; i < belowDecimalPointText.length; i++) {
       if (i  === lineDigitsNum) {
         remaining_digits_text += '\n' + ' '.repeat(piStartText.length)
       } else if (i % sectionDigitsNum === 0) {
         remaining_digits_text += ' '
       }
-      remaining_digits_text += piBelowTheDecimalPoint[i]
+      remaining_digits_text += belowDecimalPointText[i]
     }
     return remaining_digits_text
   }
@@ -121,8 +136,8 @@ class ShowPiMode {
 
   buildSeparatedPiText () {
     let piTextSections = []
-    for (let i = 0; i < piBelowTheDecimalPoint.length; i += sectionDigitsNum) {
-      piTextSections.push(piBelowTheDecimalPoint.substring(i, i + sectionDigitsNum))
+    for (let i = 0; i < belowDecimalPointText.length; i += sectionDigitsNum) {
+      piTextSections.push(belowDecimalPointText.substring(i, i + sectionDigitsNum))
     }
     const sectionsNumPerLine = 5
     let piTextBlocks = []
@@ -198,8 +213,9 @@ class Game {
   async playMode (answer) {
     switch (answer) {
       case this.practiceModeText:
-        return new PracticeMode().start()
+        return new typingMode().start({isRealMode: false})
       case this.realModeText:
+        return new typingMode().start({isRealMode: true})
         break;
       case this.showPiDigitsModeText:
         return new ShowPiMode().start()
