@@ -69,14 +69,19 @@ class typingMode {
           process.stdout.write(char)
           currentIndex++
         } else {
-          const result = isRealMode ? 'score' : 'ending point'
-          const scoreMessage = `Your ${result}: ${chalk.bold.green(currentIndex)}`
+          const endingIndexMessage
+            = this.makeEndingIndexMessage({endingIndex: currentIndex, isRealMode: isRealMode})
           const remainingDigitsText = this.make_remaining_digits_text(currentIndex)
-          console.log(chalk.red(remainingDigitsText) + '\n\n' + scoreMessage)
+          console.log(chalk.red(remainingDigitsText) + '\n\n' + endingIndexMessage)
           this.breakLoop(resolve)
         }
       })
     })
+  }
+
+  makeEndingIndexMessage ({endingIndex, isRealMode}) {
+    const result = isRealMode ? 'score' : 'ending point'
+    return `Your ${result}: ${chalk.bold.green(endingIndex)}`
   }
 
   breakLoop (resolve) {
