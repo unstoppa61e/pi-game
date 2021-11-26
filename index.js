@@ -19,8 +19,7 @@ class PracticeMode {
     const answer = await prompt.run()
     if (answer < 1 || answer > digitsNum) {
       console.log(chalk.bold.red('Your input is out of the range.'))
-      await this.start()
-      return
+      return this.start()
     }
     const startIndex = answer - 1
     const instruction = 'Keep typing in the number which fits the cursor position.'
