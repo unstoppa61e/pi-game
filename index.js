@@ -80,8 +80,9 @@ class typingMode {
   }
 
   makeEndingIndexMessage ({endingIndex, isRealMode}) {
-    const result = isRealMode ? 'score' : 'ending point'
-    return `Your ${result}: ${chalk.bold.green(endingIndex)}`
+    const resultType = isRealMode ? 'score' : 'ending point'
+    const resultNum = isRealMode ? endingIndex : (endingIndex + 1)
+    return `Your ${resultType}: ${chalk.bold.green(resultNum)}`
   }
 
   breakLoop (resolve) {
