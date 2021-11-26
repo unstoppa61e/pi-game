@@ -19,19 +19,18 @@ class PracticeMode {
     const answer = await prompt.run()
     if (answer < 1 || answer > digitsNum) {
       console.log(chalk.bold.red('Your input is out of the range.'))
-      process.exit()
+      await this.start()
+      return
     }
     const startIndex = answer - 1
-    // console.log("\nstartIndex:", startIndex)
+    const instruction = 'Keep typing in the number which fits the cursor position.'
+    process.stdout.write(chalk.bold.green(instruction) + '\n\n' + piStartText + piBelowTheDecimalPoint.slice(0, startIndex))
     return this.startTypingSession(startIndex)
   }
 
-  // async startTypingSession (startIndex = 0) {
   startTypingSession (startIndex = 0) {
     return new Promise((resolve, reject) => {
-      const instruction = 'Keep typing in the number which fits the cursor position.'
       let currentIndex = startIndex
-      process.stdout.write(chalk.bold.green(instruction) + '\n\n' + piStartText + piBelowTheDecimalPoint.slice(0, startIndex))
       const readline = require('readline')
       readline.emitKeypressEvents(process.stdin)
       process.stdin.setRawMode(true)
@@ -110,15 +109,22 @@ class Game {
     this.highScores = 'HIGH SCORES（未実装）'
   }
 
-  async start () {
-    // console.log(process.stdin._events)
+  async buildPrompt () {
     const modes = [
-      { name: this.practiceMode, explanation: 'Check how many digits of pi you can name from the point you designated.' },
-      { name: this.realMode, explanation: 'Check how many digits of pi you can name.' },
-      { name: this.showPiDigits, explanation: 'Check the first 100 digits of pi.' },
-      { name: this.highScores, explanation: 'Check the high scores.' }
+      {
+        name: this.practiceMode,
+        explanation: 'Check how many digits of pi you can name from the point you designated.'
+      },
+      {
+        name: this.realMode,
+        explanation: 'Check how many digits of pi you can name.'
+      },
+      {
+        name: this.showPiDigits,
+        explanation: 'Check the first 100 digits of pi.'
+      }
     ]
-    const prompt = new Select({
+    return new Select({
       name: 'mode',
       message: 'Select your mode:',
       choices: modes.map(mode => mode.name),
@@ -127,26 +133,45 @@ class Game {
         return chalk.green('\n' + explanations[this.index])
       }
     })
-
-    // const answer = await prompt.run()
-    prompt.run().then(answer => {
-      switch (answer) {
-        case this.practiceMode:
-          new PracticeMode(this.pi_text).start().then(promise => new Game().start())
-          // new PracticeMode(this.pi_text).start().then(promise => console.log('hoge'))
-          break;
-        case this.realMode:
-          break;
-        case this.showPiDigits:
-          new ShowPiMode(this.pi_text).start()
-          break;
-        case this.highScores:
-          break;
-
-      }
-    })
-    // new Game().start()
   }
+
+  async start () {
+    const prompt = await this.buildPrompt()
+    prompt.run().then(answer => {
+      this.playMode(answer).then(promise => new Game().start())
+    })
+  }
+
+
+  playMode (answer) {
+    switch (answer) {
+      case this.practiceMode:
+        return new PracticeMode(this.pi_text).start()
+      case this.realMode:
+        break;
+      case this.showPiDigits:
+        return new ShowPiMode(this.pi_text).start()
+    }
+  }
+
+  // async start () {
+  //   const prompt = await this.buildPrompt()
+  //   prompt.run().then(answer => {
+  //     switch (answer) {
+  //       case this.practiceMode:
+  //         new PracticeMode(this.pi_text).start().then(promise => new Game().start())
+  //         break;
+  //       case this.realMode:
+  //         break;
+  //       case this.showPiDigits:
+  //         new ShowPiMode(this.pi_text).start()
+  //         break;
+  //       case this.highScores:
+  //         break;
+  //
+  //     }
+  //   })
+  // }
 }
 
 class ShowPiMode {
@@ -181,8 +206,4 @@ class ShowPiMode {
 const welcomeMessage = '>'.repeat(10) + ' PI GAME ' + '<'.repeat(10)
 console.log(chalk.bold.green(welcomeMessage))
 
-console.log(process.stdin._events)
 new Game().start()
-// setTimeout(() => {
-//   console.log(process.stdin._events)
-// }, 10000)
