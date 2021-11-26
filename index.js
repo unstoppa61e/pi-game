@@ -16,6 +16,7 @@ class PracticeMode {
   async start () {
     const prompt = await this.getStartingPointPrompt()
     const answer = await prompt.run()
+    console.clear()
     if (answer < 1 || answer > digitsNum) {
       console.log(chalk.bold.red('Your input is out of the range.'))
       return this.start()
@@ -129,29 +130,26 @@ class ShowPiMode {
     this.pi_text = pi_text
   }
 
-  start () {
-    return new Promise((resolve, reject) => {
-      this.putPiText()
-      this.prepareProcessStdinForInput()
-      console.log('Press any key to return to the mode selection.')
-      process.stdin.once('data', () => { resolve() })
-    })
-  }
   // start () {
   //   return new Promise((resolve, reject) => {
   //     this.putPiText()
-  //     resolve()
   //     this.prepareProcessStdinForInput()
   //     console.log('Press any key to return to the mode selection.')
   //     process.stdin.once('data', () => { resolve() })
   //   })
   // }
-
-  prepareProcessStdinForInput () {
-    require('readline').emitKeypressEvents(process.stdin)
-    process.stdin.setRawMode(true)
-    process.stdin.resume()
+  start () {
+    return new Promise((resolve, reject) => {
+      this.putPiText()
+      resolve()
+    })
   }
+
+  // prepareProcessStdinForInput () {
+  //   require('readline').emitKeypressEvents(process.stdin)
+  //   process.stdin.setRawMode(true)
+  //   process.stdin.resume()
+  // }
 
   putPiText () {
     const pi_text = this.buildSeparatedPiText()
@@ -221,8 +219,21 @@ class Game {
     const prompt = await this.buildPrompt()
     prompt.run().then(answer => {
       console.clear()
-      this.playMode(answer).then(promise => new Game().start())
+      this.playMode(answer).then(promise => {
+        this.prepareProcessStdinForInput()
+        console.log('Press any key to return to the mode selection.')
+        process.stdin.once('data', () => {
+          console.clear()
+          new Game().start()
+        })
+      })
     })
+  }
+
+  prepareProcessStdinForInput () {
+    require('readline').emitKeypressEvents(process.stdin)
+    process.stdin.setRawMode(true)
+    process.stdin.resume()
   }
 
   buildWelcomeMessage () {
