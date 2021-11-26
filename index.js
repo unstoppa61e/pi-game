@@ -69,16 +69,19 @@ class PracticeMode {
   }
 
   putsCongratulations () {
+    const message = this.buildCongratulationsMessage()
+    console.log(chalk.bold.green(message))
+  }
+
+  buildCongratulationsMessage () {
     const headSpaces = ' '.repeat(6)
-    const congratulationsSentences = [
+    const sentences = [
       'Congratulations!',
       `You have memorized the first ${digitsNum} digits of pi.`
     ]
-    let congratulations = ''
-    congratulationsSentences.forEach(sentence => {
-      congratulations += headSpaces + sentence + '\n'
-    })
-    console.log(chalk.bold.green(congratulations))
+    return sentences.map(sentence => {
+      return headSpaces + sentence + '\n'
+    }).join('')
   }
 
   make_remaining_digits_text (currentIndex) {
@@ -141,7 +144,6 @@ class Game {
     })
   }
 
-
   playMode (answer) {
     switch (answer) {
       case this.practiceMode:
@@ -152,25 +154,6 @@ class Game {
         return new ShowPiMode(this.pi_text).start()
     }
   }
-
-  // async start () {
-  //   const prompt = await this.buildPrompt()
-  //   prompt.run().then(answer => {
-  //     switch (answer) {
-  //       case this.practiceMode:
-  //         new PracticeMode(this.pi_text).start().then(promise => new Game().start())
-  //         break;
-  //       case this.realMode:
-  //         break;
-  //       case this.showPiDigits:
-  //         new ShowPiMode(this.pi_text).start()
-  //         break;
-  //       case this.highScores:
-  //         break;
-  //
-  //     }
-  //   })
-  // }
 }
 
 class ShowPiMode {
@@ -179,7 +162,7 @@ class ShowPiMode {
   }
 
   async start () {
-    let sectionHeadIndex = 2
+    const sectionHeadIndex = 2
     const sectionDigits = 10
     let pi_text = this.pi_text.slice(0, 2)
     for (let i = 0; i < 10; i++) {
@@ -202,7 +185,8 @@ class ShowPiMode {
   }
 }
 
-const welcomeMessage = '>'.repeat(10) + ' PI GAME ' + '<'.repeat(10)
+const repeatingTimes = 10
+const welcomeMessage = '>'.repeat(repeatingTimes) + ' PI GAME ' + '<'.repeat(repeatingTimes)
 console.log(chalk.bold.green(welcomeMessage))
 
 new Game().start()
