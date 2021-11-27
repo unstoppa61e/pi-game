@@ -11,6 +11,9 @@ const piStartText = '3.'
 const belowDecimalPointText = piText.substring(piStartText.length)
 const sectionDigitsNum = 10
 
+let lastStartingPoint = 1
+let lastEndingPoint = null
+
 function prepareProcessStdinForInput () {
   readline.emitKeypressEvents(process.stdin)
   process.stdin.setRawMode(true)
@@ -41,11 +44,15 @@ class TypingMode {
 
   async getStartIndex () {
     const prompt = await this.getStartingPointPrompt().catch(() => { quitGame() })
+    if (lastEndingPoint) {
+      console.log(`  ${chalk.bold('Your last ending point:')} ${chalk.bold.cyan(lastEndingPoint)}`)
+    }
     const answer = await prompt.run().catch(() => { quitGame() })
     if (answer < 1 || answer > belowDecimalPointText.length) {
       console.log(chalk.bold.red('Your input is out of range.'))
       return this.outOfRange
     }
+    lastStartingPoint = answer
     return answer - 1
   }
 
@@ -53,7 +60,8 @@ class TypingMode {
     const { NumberPrompt } = require('enquirer')
     return new NumberPrompt({
       name: 'number',
-      message: 'Set your designated point(1-100): '
+      message: 'Set your designated point(1-100): ',
+      initial: lastStartingPoint
     })
   }
 
@@ -78,7 +86,10 @@ class TypingMode {
         } else {
           const endingIndexMessage =
             this.makeEndingIndexMessage({ endingIndex: currentIndex, isRealMode: isRealMode })
-          const remainingDigitsText = this.make_remaining_digits_text(currentIndex)
+          if (!isRealMode) {
+            lastEndingPoint = currentIndex + 1
+          }
+          const remainingDigitsText = this.makeRemainingDigitsText(currentIndex)
           console.log(chalk.red(remainingDigitsText) + '\n\n' + endingIndexMessage)
           this.breakLoop(resolve)
         }
@@ -88,18 +99,15 @@ class TypingMode {
 
   putCongratulations () {
     const message = this.buildCongratulationsMessage()
-    console.log(chalk.bold.green(message))
+    console.log('\n' + chalk.bold.green(message))
   }
 
   buildCongratulationsMessage () {
-    const headSpaces = ' '.repeat(6)
     const sentences = [
       'Congratulations!',
       `You have memorized the first ${belowDecimalPointText.length} digits of pi.`
     ]
-    return sentences.map(sentence => {
-      return headSpaces + sentence + '\n'
-    }).join('')
+    return sentences.join('\n')
   }
 
   makeEndingIndexMessage ({ endingIndex, isRealMode }) {
@@ -114,29 +122,24 @@ class TypingMode {
     resolve()
   }
 
-  make_remaining_digits_text (currentIndex) {
-    let remaining_digits_text = ''
+  makeRemainingDigitsText (currentIndex) {
+    let remainingDigitsText = ''
     const lineDigitsNum = 50
     for (let i = currentIndex; i < belowDecimalPointText.length; i++) {
       if (i === lineDigitsNum) {
-        remaining_digits_text += '\n' + ' '.repeat(piStartText.length)
+        remainingDigitsText += '\n' + ' '.repeat(piStartText.length)
       } else if (i !== 0 && i % sectionDigitsNum === 0) {
-        remaining_digits_text += ' '
+        remainingDigitsText += ' '
       }
-      remaining_digits_text += belowDecimalPointText[i]
+      remainingDigitsText += belowDecimalPointText[i]
     }
-    return remaining_digits_text
+    return currentIndex >= lineDigitsNum ? ('\n' + remainingDigitsText) : remainingDigitsText
   }
 }
 
 class ShowPiMode {
   async start () {
-    this.putPiText()
-  }
-
-  putPiText () {
-    const pi_text = this.buildSeparatedPiText()
-    console.log(pi_text)
+    console.log(this.buildSeparatedPiText())
   }
 
   buildSeparatedPiText () {
@@ -181,8 +184,7 @@ class Game {
 
   async getSelectedModeName () {
     const prompt = await this.buildPrompt().catch(() => quitGame())
-    const selectedModeName = await prompt.run().catch(() => quitGame())
-    return selectedModeName
+    return await prompt.run().catch(() => quitGame())
   }
 
   async buildPrompt () {
