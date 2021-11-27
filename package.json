@@ -1,6 +1,6 @@
 {
   "name": "pi-game",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Game to help remember the first 100 digits of pi.",
   "main": "index.js",
   "bin": {
