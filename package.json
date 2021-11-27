@@ -1,37 +1,37 @@
 {
   "name": "pi-game",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Game to help remember the first 100 digits of pi.",
   "main": "index.js",
   "bin": {
-	"pi-game": "./index.js"
+    "pi-game": "./index.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
-	"type": "git",
-	"url": "git+https://github.com/unstoppa61e/pi-game.git"
+    "type": "git",
+    "url": "git+https://github.com/unstoppa61e/pi-game.git"
   },
   "keywords": [
-	"pi",
-	"game",
-	"remember",
-	"memorize",
-	"quiz",
-	"fun",
-	"100",
-	"cli",
-	"command-line",
-	"learn",
-	"study",
-	"play",
-	"hobby"
+    "pi",
+    "game",
+    "remember",
+    "memorize",
+    "quiz",
+    "fun",
+    "100",
+    "cli",
+    "command-line",
+    "learn",
+    "study",
+    "play",
+    "hobby"
   ],
   "author": "unstoppa61e (https://github.com/unstoppa61e)",
   "license": "MIT",
   "bugs": {
-	"url": "https://github.com/unstoppa61e/pi-game/issues"
+    "url": "https://github.com/unstoppa61e/pi-game/issues"
   },
   "homepage": "https://github.com/unstoppa61e/pi-game",
   "dependencies": {
@@ -39,6 +39,5 @@
     "enquirer": "^2.3.6",
     "keypress": "^0.2.1"
   },
-  "devDependencies": {
-  }
+  "devDependencies": {}
 }
