@@ -16,7 +16,7 @@
 Install with [npm](https://www.npmjs.com/):
 
 ```sh
-$ npm i pi-game
+$ npm i -g pi-game
 ```
 
 ## ❯ Usage
