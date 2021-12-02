@@ -31,7 +31,7 @@ class TypingMode {
   }
 
   async start ({ isRealMode }) {
-    const startIndex = isRealMode ? 0 : await this.getStartIndex()
+    const startIndex = isRealMode ? 0 : await this.#getStartIndex()
     if (startIndex === this.outOfRange) {
       await this.start({ isRealMode: false })
       return
@@ -39,24 +39,28 @@ class TypingMode {
     const instruction = 'Start typing pi.'
     console.clear()
     process.stdout.write(chalk.bold.green(instruction) + '\n\n' + piStartText + belowDecimalPointText.slice(0, startIndex))
-    await this.startTypingSession(startIndex, isRealMode)
+    await this.#startTypingSession(startIndex, isRealMode)
   }
 
-  async getStartIndex () {
-    const prompt = await this.getStartingPointPrompt().catch(() => { quitGame() })
-    if (lastEndingPoint) {
-      console.log(`  ${chalk.bold('Your last ending point:')} ${chalk.bold.cyan(lastEndingPoint)}`)
+  async #getStartIndex () {
+    try {
+      const prompt = await this.#getStartingPointPrompt()
+      if (lastEndingPoint) {
+        console.log(`  ${chalk.bold('Your last ending point:')} ${chalk.bold.cyan(lastEndingPoint)}`)
+      }
+      const answer = await prompt.run()
+      if (answer < 1 || answer > belowDecimalPointText.length) {
+        console.log(chalk.bold.red('Your input is out of range.'))
+        return this.outOfRange
+      }
+      lastStartingPoint = answer
+      return answer - 1
+    } catch {
+      quitGame()
     }
-    const answer = await prompt.run().catch(() => { quitGame() })
-    if (answer < 1 || answer > belowDecimalPointText.length) {
-      console.log(chalk.bold.red('Your input is out of range.'))
-      return this.outOfRange
-    }
-    lastStartingPoint = answer
-    return answer - 1
   }
 
-  async getStartingPointPrompt () {
+  async #getStartingPointPrompt () {
     const { NumberPrompt } = require('enquirer')
     return new NumberPrompt({
       name: 'number',
@@ -65,7 +69,7 @@ class TypingMode {
     })
   }
 
-  async startTypingSession (startIndex, isRealMode) {
+  async #startTypingSession (startIndex, isRealMode) {
     return new Promise((resolve, reject) => {
       prepareProcessStdinForInput()
       const piLastNumber = belowDecimalPointText.slice(-1)
@@ -77,32 +81,32 @@ class TypingMode {
         } else if (currentIndex === piLastIndex && char === piLastNumber) {
           console.log(piLastNumber)
           if (isRealMode) {
-            this.putCongratulations()
+            this.#putCongratulations()
           }
-          this.breakLoop(resolve)
+          this.#breakLoop(resolve)
         } else if (char === belowDecimalPointText[currentIndex]) {
           process.stdout.write(char)
           currentIndex++
         } else {
           const endingIndexMessage =
-            this.makeEndingIndexMessage({ endingIndex: currentIndex, isRealMode: isRealMode })
+            this.#makeEndingIndexMessage({ endingIndex: currentIndex, isRealMode: isRealMode })
           if (!isRealMode) {
             lastEndingPoint = currentIndex + 1
           }
-          const remainingDigitsText = this.makeRemainingDigitsText(currentIndex)
+          const remainingDigitsText = this.#makeRemainingDigitsText(currentIndex)
           console.log(chalk.red(remainingDigitsText) + '\n\n' + endingIndexMessage)
-          this.breakLoop(resolve)
+          this.#breakLoop(resolve)
         }
       })
     })
   }
 
-  putCongratulations () {
-    const message = this.buildCongratulationsMessage()
+  #putCongratulations () {
+    const message = this.#buildCongratulationsMessage()
     console.log('\n' + chalk.bold.green(message))
   }
 
-  buildCongratulationsMessage () {
+  #buildCongratulationsMessage () {
     const sentences = [
       'Congratulations!',
       `You have memorized the first ${belowDecimalPointText.length} digits of pi.`
@@ -110,19 +114,19 @@ class TypingMode {
     return sentences.join('\n')
   }
 
-  makeEndingIndexMessage ({ endingIndex, isRealMode }) {
+  #makeEndingIndexMessage ({ endingIndex, isRealMode }) {
     const resultType = isRealMode ? 'score' : 'ending point'
     const resultNum = isRealMode ? endingIndex : (endingIndex + 1)
     return `Your ${resultType}: ${chalk.bold.green(resultNum)}`
   }
 
-  breakLoop (resolve) {
+  #breakLoop (resolve) {
     process.stdin.removeAllListeners('keypress')
     process.stdin.pause()
     resolve()
   }
 
-  makeRemainingDigitsText (currentIndex) {
+  #makeRemainingDigitsText (currentIndex) {
     let remainingDigitsText = ''
     const lineDigitsNum = 50
     for (let i = currentIndex; i < belowDecimalPointText.length; i++) {
@@ -139,10 +143,10 @@ class TypingMode {
 
 class ShowPiMode {
   async start () {
-    console.log(this.buildSeparatedPiText())
+    console.log(this.#buildSeparatedPiText())
   }
 
-  buildSeparatedPiText () {
+  #buildSeparatedPiText () {
     const piTextSections = []
     for (let i = 0; i < belowDecimalPointText.length; i += sectionDigitsNum) {
       piTextSections.push(belowDecimalPointText.substring(i, i + sectionDigitsNum))
@@ -165,29 +169,29 @@ class Game {
   }
 
   async start () {
-    this.putWelcomeMessage()
-    const selectedModeName = await this.getSelectedModeName()
-    await this.playMode(selectedModeName).catch(() => quitGame())
-    this.leadToNextGame()
+    this.#putWelcomeMessage()
+    const selectedModeName = await this.#getSelectedModeName()
+    await this.#playMode(selectedModeName)
+    this.#leadToNextGame()
   }
 
-  putWelcomeMessage () {
+  #putWelcomeMessage () {
     console.clear()
-    const welcomeMessage = this.buildWelcomeMessage()
+    const welcomeMessage = this.#buildWelcomeMessage()
     console.log(chalk.bold.green(welcomeMessage) + '\n')
   }
 
-  buildWelcomeMessage () {
+  #buildWelcomeMessage () {
     const repeatingTimes = 10
     return '>'.repeat(repeatingTimes) + ' PI GAME ' + '<'.repeat(repeatingTimes)
   }
 
-  async getSelectedModeName () {
-    const prompt = await this.buildPrompt().catch(() => quitGame())
-    return await prompt.run().catch(() => quitGame())
+  async #getSelectedModeName () {
+    const prompt = await this.#buildPrompt().catch(() => quitGame())
+    return await prompt.run()
   }
 
-  async buildPrompt () {
+  async #buildPrompt () {
     const modes = [
       {
         name: this.practiceModeText,
@@ -217,7 +221,7 @@ class Game {
     })
   }
 
-  async playMode (modeName) {
+  async #playMode (modeName) {
     switch (modeName) {
       case this.practiceModeText:
         return new TypingMode().start({ isRealMode: false })
@@ -230,7 +234,7 @@ class Game {
     }
   }
 
-  leadToNextGame () {
+  #leadToNextGame () {
     prepareProcessStdinForInput()
     console.log('\nPress any key to return to mode selection.')
     process.stdin.once('data', () => {
